@@ -6,7 +6,7 @@
 
 Os dados de vendas já estavam no ERP, mas consultar as informações em tabelas dificultava comparar períodos, entender o desempenho comercial e apresentar os resultados a outras pessoas. O painel nasceu para reunir essas informações em uma leitura visual, com indicadores, filtros e comparações que ajudam a explicar o que mudou.
 
-## Sistema original em produção
+## Sistema original 
 
 O painel original foi desenvolvido em **Python** e é hospedado no **Streamlit**. Ele recebe relatórios de vendas exportados do ERP em CSV. O pandas trata as colunas, aplica os filtros e agrega os dados. O Streamlit monta a interface e o pacote streamlit-echarts renderiza os gráficos com Apache ECharts.
 
