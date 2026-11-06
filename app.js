@@ -1,6 +1,7 @@
 "use strict";
 const $ = id => document.getElementById(id);
 const regions = ["Sudeste", "Sul", "Nordeste", "Centro-Oeste"];
+const statesByRegion = [["SP","MG","RJ"],["PR","SC","RS"],["BA","PE","CE"],["GO","MT","MS"]];
 const catalog = [
   ["Linha Flex A", "Mangueiras", 36, .67],
   ["Linha Flex B", "Mangueiras", 28, .79],
@@ -24,7 +25,7 @@ for (const year of [2023,2024,2025]) {
       const returns = Math.round((gross-discount)*returnedKg/kg);
       const cost = Math.round((kg-returnedKg)*price*(costRate+(year===2025?.018:0)));
       rows.push({year,month,order:year+"-"+month+"-"+i,region:regions[(i+Math.floor(i/7))%4],
-        client:"Cliente "+String(1+(i*7+month)%15).padStart(2,"0"),product,family,
+        uf:statesByRegion[(i+Math.floor(i/7))%4][(i+month)%3], client:"Cliente "+String(1+(i*7+month)%15).padStart(2,"0"),product,family,
         kg:kg-returnedKg,gross,discount,returns,cost,net:gross-discount-returns});
     }
   }
@@ -53,19 +54,23 @@ function options(id,values) {
   for(const value of values) $(id).append(new Option(value,value));
 }
 options("region",regions);
+options("uf",statesByRegion.flat().sort());
+options("product",catalog.map(item=>item[0]));
+options("client",[...new Set(rows.map(row=>row.client))].sort());
 options("family",[...new Set(catalog.map(row=>row[1]))]);
 let selection = [];
 function render() {
-  const year=Number($("year").value), q=Number($("quarter").value), region=$("region").value, family=$("family").value;
+  const year=Number($("year").value), q=Number($("quarter").value), region=$("region").value, family=$("family").value, uf=$("uf").value, product=$("product").value, client=$("client").value;
   const selectedMonths=months.map((_,i)=>i+1).filter(m=>!q||Math.ceil(m/3)===q);
-  const pick=y=>rows.filter(r=>r.year===y&&selectedMonths.includes(r.month)&&(!region||r.region===region)&&(!family||r.family===family));
+  const pick=y=>rows.filter(r=>r.year===y&&selectedMonths.includes(r.month)&&(!region||r.region===region)&&(!family||r.family===family)&&(!uf||r.uf===uf)&&(!product||r.product===product)&&(!client||r.client===client));
   selection=pick(year);
   const a=metrics(selection), b=metrics(pick(year-1));
   const change=(x,y)=>y?(x>=y?"+":"")+pct((x-y)/y):"—";
   const signed=n=>(n>=0?"+":"")+num.format(n);
   const summary=[
+    ["Faturamento bruto",cash(total(selection,"gross")),change(total(selection,"gross"),total(pick(year-1),"gross"))],
     ["Receita líquida",cash(a.net),change(a.net,b.net)],["Volume líquido",num.format(a.kg)+" kg",change(a.kg,b.kg)],
-    ["Pedidos",num.format(a.orders),change(a.orders,b.orders)],["Ticket médio",cash(a.ticket),change(a.ticket,b.ticket)],
+    ["Nº de notas",num.format(a.orders),change(a.orders,b.orders)],["Clientes registrados",num.format(new Set(selection.map(r=>r.client)).size),change(new Set(selection.map(r=>r.client)).size,new Set(pick(year-1).map(r=>r.client)).size)],["Ticket médio",cash(a.ticket),change(a.ticket,b.ticket)],
     ["Margem bruta",cash(a.profit),change(a.profit,b.profit)],["Margem bruta %",pct(a.margin),signed(100*(a.margin-b.margin))+" p.p."]
   ];
   $("cards").innerHTML=summary.map(([label,value,delta])=>'<div class="card">'+label+'<strong class="value">'+value+'</strong><small>'+delta+' vs. '+(year-1)+'</small></div>').join("");
@@ -77,12 +82,14 @@ function render() {
   $("products").innerHTML=table(["Produto","Receita","Margem R$","Margem %"],products.map(p=>[p.name,cash(p.net),cash(p.profit),pct(p.margin)]));
   $("clients").innerHTML=table(["Cliente","Receita","Participação"],clients.slice(0,6).map(p=>[p.name,cash(p.net),pct(a.net?p.net/a.net:0)]));
   $("bridge").innerHTML=table(["Componente","Valor"],[["Faturamento bruto",cash(total(selection,"gross"))],["Descontos",cash(-total(selection,"discount"))],["Devoluções",cash(-total(selection,"returns"))],["Receita líquida",cash(a.net)],["Custo líquido",cash(-a.cost)],["Margem bruta",cash(a.profit)]]);
-  const targetVisible=!region&&!family;
+  const targetVisible=!region&&!family&&!uf&&!product&&!client;
   const series=selectedMonths.map(m=>({label:months[m-1],net:total(selection.filter(r=>r.month===m),"net"),target:targetVisible?Math.round((year===2025?178000:150000)*(1+.18*Math.sin((m-3)*Math.PI/6))):0}));
   const scale=Math.max(1,...series.flatMap(r=>[r.net,r.target]));
   const step=540/series.length, bar=Math.min(40,step*.6), x=i=>55+step*(i+.5), y=n=>180-145*n/scale;
   $("chart").innerHTML='<svg viewBox="0 0 620 215" role="img" aria-label="Gráfico mensal de receita e meta"><line x1="55" y1="180" x2="595" y2="180" stroke="#9bb1c4"/>'+series.map((r,i)=>'<rect x="'+(x(i)-bar/2)+'" y="'+y(r.net)+'" width="'+bar+'" height="'+(180-y(r.net))+'" fill="#1675a4"><title>'+r.label+': '+cash(r.net)+'</title></rect><text x="'+x(i)+'" y="201" text-anchor="middle" font-size="13" fill="#294458">'+r.label+'</text>').join("")+(targetVisible?'<polyline points="'+series.map((r,i)=>x(i)+','+y(r.target)).join(' ')+'" fill="none" stroke="#a74b00" stroke-width="3" stroke-dasharray="6 4"/>':"")+'</svg>';
   $("months").innerHTML=table(["Mês","Receita","Meta"],series.map(r=>[r.label,cash(r.net),targetVisible?cash(r.target):"—"]));
+  $("states").innerHTML=table(["UF","Faturamento","Receita líquida","Participação no faturamento"],rank(selection,"uf").map(state=>[state.name,cash(total(selection.filter(r=>r.uf===state.name),"gross")),cash(state.net),pct(total(selection,"gross")?total(selection.filter(r=>r.uf===state.name),"gross")/total(selection,"gross"):0)]));
+  $("sample").innerHTML=table(["Nota fictícia","UF","Cliente","Produto","Volume líquido","Receita líquida"],selection.slice(0,15).map(r=>[r.order,r.uf,r.client,r.product,num.format(r.kg)+" kg",cash(r.net)]));
   $("records").textContent=num.format(selection.length)+" registros fictícios no recorte. O CSV inclui produtos, clientes, valores e custos.";
   $("download").disabled=!selection.length;
 }
