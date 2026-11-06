@@ -41,7 +41,9 @@ A página pública replica as principais perguntas e visões comerciais do Strea
 - **Distribuição por UF** e tabela com uma amostra das notas filtradas.
 - **Exportação CSV** dos registros do recorte selecionado.
 
-Comece pelo ano de 2025 e compare a evolução da receita com a margem percentual. Depois filtre **Mangueiras** e consulte os rankings e a composição do resultado para investigar o efeito do mix, dos descontos e dos custos.
+Comece pelo ano de 2025 e compare a evolução da receita com a margem percentual. Depois filtre **Produto** e consulte os rankings e a composição do resultado para investigar o efeito do mix, dos descontos e dos custos.
+
+A lista de produtos acompanha a família escolhida. Por exemplo, **Produto** mostra Produto A e Produto B, enquanto **Conexões** mostra apenas as conexões.
 
 ## Dados e indicadores
 

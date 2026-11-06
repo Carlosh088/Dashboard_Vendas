@@ -3,8 +3,8 @@ const $ = id => document.getElementById(id);
 const regions = ["Sudeste", "Sul", "Nordeste", "Centro-Oeste"];
 const statesByRegion = [["SP","MG","RJ"],["PR","SC","RS"],["BA","PE","CE"],["GO","MT","MS"]];
 const catalog = [
-  ["Linha Flex A", "Mangueiras", 36, .67],
-  ["Linha Flex B", "Mangueiras", 28, .79],
+  ["Produto A", "Produto", 36, .67],
+  ["Produto B", "Produto", 28, .79],
   ["Conexão Série A", "Conexões", 55, .49],
   ["Conexão Série B", "Conexões", 47, .58],
   ["Kit Manutenção", "Acessórios", 66, .57],
@@ -55,9 +55,18 @@ function options(id,values) {
 }
 options("region",regions);
 options("uf",statesByRegion.flat().sort());
-options("product",catalog.map(item=>item[0]));
+function refreshProducts() {
+  const family = $("family").value;
+  const select = $("product");
+  const previous = select.value;
+  const products = catalog.filter(item => !family || item[1] === family).map(item => item[0]);
+  select.replaceChildren(new Option("Todos", ""));
+  for (const product of products) select.add(new Option(product, product));
+  select.value = products.includes(previous) ? previous : "";
+}
 options("client",[...new Set(rows.map(row=>row.client))].sort());
 options("family",[...new Set(catalog.map(row=>row[1]))]);
+refreshProducts();
 let selection = [];
 function render() {
   const year=Number($("year").value), q=Number($("quarter").value), region=$("region").value, family=$("family").value, uf=$("uf").value, product=$("product").value, client=$("client").value;
@@ -93,9 +102,15 @@ function render() {
   $("records").textContent=num.format(selection.length)+" registros fictícios no recorte. O CSV inclui produtos, clientes, valores e custos.";
   $("download").disabled=!selection.length;
 }
-$("filters").addEventListener("change",render);
+$("filters").addEventListener("change", event => {
+  if (event.target === $("family")) refreshProducts();
+  render();
+});
 $("filters").addEventListener("submit",e=>e.preventDefault());
-$("filters").addEventListener("reset",()=>setTimeout(render,0));
+$("filters").addEventListener("reset", () => setTimeout(() => {
+  refreshProducts();
+  render();
+}, 0));
 $("download").addEventListener("click",()=>{
   const columns=Object.keys(rows[0]);
   const csv=columns.join(";")+"\r\n"+selection.map(row=>columns.map(k=>row[k]).join(";")).join("\r\n");
